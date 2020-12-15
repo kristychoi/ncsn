@@ -36,3 +36,27 @@ def anneal_dsm_score_estimation(scorenet, samples, labels, sigmas, anneal_power=
     loss = 1 / 2. * ((scores - target) ** 2).sum(dim=-1) * used_sigmas.squeeze() ** anneal_power
 
     return loss.mean(dim=0)
+
+
+def timewise_score_estimation(scorenet, samples, t):
+    """
+    in objective, T = [0, 1]
+    px, qx, xt: (batch_size, 1)
+    t: (batch_size, 1)
+    """
+    px, qx, xt = samples
+
+    term1 = 2 * scorenet(torch.cat([px, torch.zeros_like(px)], dim=-1))
+    term2 = 2 * scorenet(torch.cat([qx, torch.ones_like(qx)], dim=-1))
+    
+    # need to differentiate score wrt t
+    t.requires_grad_(True)
+    xt_score = scorenet(torch.cat([xt, t], dim=-1)).mean()  # dim = 1
+    xt_score_dt = autograd.grad(xt_score, t, create_graph=True)[0]
+    term3 = 2 * xt_score_dt
+    term4 = (scorenet(torch.cat([xt, t], dim=-1)))**2
+
+    loss = term1 - term2 + term3 + term4
+
+    # 1-d so we can just take the mean rather than summing
+    return loss.mean()

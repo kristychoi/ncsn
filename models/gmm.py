@@ -81,6 +81,39 @@ class GMMDist(object):
         return logp
 
 
+class PeakedGaussians(object):
+    """
+    The ratio we are estimating is: r(x) = log q(x) - log p(x)
+    where q(x) = N(0, 1e-6) and p(x) = N(0, 1)
+    q(x) corresponds to T = 1, p(x) corresponds to T = 0
+    """
+    def __init__(self, dim):
+        self.means = [0, 0]
+        # self.sigmas = [1e-6, 1]
+        self.sigmas = [1, 1e-6]  # for consistency with tre
+        self.dim = dim
+
+    def sample_sequence_on_the_fly(self, px, qx, t):
+        # note: t is functioning as \alpha(t) here
+        return torch.sqrt(1 - t**2) * px + (t * qx)
+
+    def sample(self, n, t):
+        px = self.means[0] + torch.randn((n, self.dim)) * self.sigmas[0]
+        qx = self.means[1] + torch.randn((n, self.dim)) * self.sigmas[1]
+        xt = self.sample_sequence_on_the_fly(px, qx, t)
+
+        return px, qx, xt
+
+    def log_density_ratios(self, samples):
+        log_p = Normal(0,self.sigmas[0]).log_prob(samples)
+        log_q = Normal(0,self.sigmas[1]).log_prob(samples)
+        # log_p = torch.distributions.Normal(0,1).log_prob(mesh)
+        # log_q = torch.distributions.Normal(0,1e-6).log_prob(mesh)
+        log_ratios = log_q - log_p
+
+        return log_ratios
+
+
 class Square(object):
     def __init__(self, range=4.):
         self.range = range

@@ -1,0 +1,5 @@
+# vanilla toy runner
+CUDA_VISIBLE_DEVICES=1 python3 main.py --runner=ToyRunner --config=toy.yml --doc=toy
+
+# timewise-score matching
+CUDA_VISIBLE_DEVICES=1 python3 main.py --runner=TimewiseToyRunner --config=toy.yml --doc=time_toy
